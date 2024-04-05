@@ -1,0 +1,27 @@
+<s>[INST] <<SYS>>
+(html(body(div class="container"(div class="row"(div class="col hdr-r justify-...flex align-items-center"(div class="hdr-categories-container"(a class="rc-link" onclick="if (!window.__cfRLUn... false; toggleFlyout()" data-webtasks-id="76978...85e-4cf1"(span class="text" data-webtasks-id="6c7fe1...640-4dce"EXPLORE)(i class="fa ency-down" data-webtasks-id="e7b787...5ae-48a5"))(div class="rc-flyout"))))) (div (div class="dialog-off-canvas-main-canvas"(div class="homepage"(div style="background-image: url('/sites...01_3.png');" class="ency-loaded"(div class="ency-loaded mask-hero")(h4 data-webtasks-id="1ea51e...fcd-4e30"The World’s #1 Online Encyclopedia)(div class="clear-both hero"(div class="ency-hero-search"(form action="https://www.encyclopedia.com/gsearch" method="get" data-webtasks-id="c7fbc11c...49-4ab2"(div class="js-form-item form-...-keys form-no-label" data-webtasks-id="8d8afc8...7-477a" (span class="field-preffix" (input class="button js-form-submit form-submit" type="submit" value="" ) (input title="" class="searchbox form-search form-input" placeholder="What do you want to learn today?" type="search" name="q" value="" size="15" maxlength="128" data-webtasks-id="67e2a5...d-41a0" spellcheck="false" (span class="field-suffix" (i class="fa ency-close")))(div class="form-actions js-form-wrapper form-wrapper" (input class="button js-form-submit form-submit" type="submit" value="Search" data-webtasks-id="fedfb512-...9e-42b3")))(div class="clear-both hero footer-copy"(a href="/about" data-webtasks-id="bf33a0...67-44f0"Read more) about our content and why so many people love it.))))))(div class="adthrive-ad adth...cls adthrive-sticky" style="min-height: 90px;" closable="true"(div style="border: 0pt none;")(span class="adthrive-close" data-webtasks-id="0ffc6f0...8a-4c2a"×))))
+You will find above the HTML elements that are available for the current webpage.
+You are an AI assistant with a deep understanding of HTML
+and you must predict actions based on a user request, which will be executed.
+Use one of the following, replacing [] with an appropriate value: change(value=[str], uid=[str]) ; click(uid=[str]) ; load(url=[str]) ; say(speaker="navigator", utterance=[str]) ; scroll(x=[int], y=[int]) ;
+submit(uid=[str]) ; text_input(text=[str], uid=[str]) ;
+The user's first and last 4 utterances are:
+[00:05] Hello ; ;
+Viewport size: 746h x 1536w
+Only the last 5 turns are provided.
+Here are the top candidates for this turn:
+(uid = 67e2a5fb-8b1d-41a0) [[tag]] input [[xpath]] /html/body/div[2...form/div[1]/input [[bbox]] x=419.6 y=461.0 width=477.6 height=89.6 [[attributes]] title='' value='' name='...What do you want to learn today?'
+(uid = fedfb512-949e-42b3) [[tag]] input [[xpath]] /html/body/div[2...form/div[2]/input [[bbox]] x=915.6 y=461.0 width=185.6 height=89.6 [[attributes]] type='submit' value='Search...-form-submit form-submit'
+(uid = c7fbc11c-0949-4ab2) [[tag]] form [[xpath]] /html/body/div[2...2]/div[3]/form [[bbox]] x=419.6 y=461.0 width=680 height=88 [[attributes]] method='get' data-web...clopedia.com/gsearch' [[children]] div div
+(uid = 6c7fe1f1-f640-4dce) [[tag]] span [[xpath]] /html/body/header/div...div[2]/a/span [[text]] EXPLORE [[bbox]] x=1240.5 y=28.6 width=54.1 height=30 [[attributes]] class='text' data-webtasks...-main-menu-menu'
+(uid = 0ffc6f0e-808a-4c2a) [[tag]] span [[xpath]] /html/body/div[5]/span [[text]] × [[bbox]] x=1485.9 y=665.6 width=23.3 height=21.6 [[attributes]] class='adthrive-close...8a-4c2a'
+(uid = 8d8afc84-5b97-477a) [[tag]] div [[xpath]] /html/body/div[...3]/form/div[1] [[text]]   [[bbox]] x=419.6 y=461.0 width=476 height=88 [[attributes]] data-webtasks-id='8...keys form-no-label' [[children]] span input
+(uid = 1ea51e98-3fcd-4e30) [[tag]] h4 [[xpath]] /html/body/div[...div/div[1]/h4 [[text]] The World’s #1 Online Encyclopedia [[bbox]] x=33 y=163 width=1453.2 height=43.2 [[attributes]] data-webtasks-id='1...cd-4e30'
+(uid = 769785af-485e-4cf1) [[tag]] a [[xpath]] /html/body/header/div...2]/div[2]/a [[bbox]] x=1240.5 y=28.6 width=74.1 height=30 [[attributes]] id='rcLink' class='... false; toggleFlyout()' [[children]] span i
+(uid = e7b7879f-45ae-48a5) [[tag]] i [[xpath]] /html/body/header/div...div[2]/a/i [[bbox]] x=1294.6 y=33.6 width=20 height=20 [[attributes]] class='fa ency-down...5ae-48a5'
+(uid = bf33a062-fb67-44f0) [[tag]] a [[xpath]] /html/body/div[2...div[4]/p/a [[text]] Read more [[bbox]] x=567.0 y=641.0 width=69.3 height=16 [[attributes]] href='/about' data-...67-44f0'
+
+<</SYS>>[/INST]
+say(speaker="navigator", utterance="Hi")</s><s>[INST] say(speaker="instructor", utterance="Open Encyclopedia website.") say(speaker="navigator", utterance="Yes, sure") load(url="https://www.encyclopedia.com/")</s><s>[INST] say(speaker="instructor", utterance="Search for biotechnology")
+Please select the best action using the correct format, do not provide any other information or explanation.
+[/INST]
