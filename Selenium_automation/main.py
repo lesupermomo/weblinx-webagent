@@ -9,59 +9,25 @@ from datasets import load_dataset
 from huggingface_hub import snapshot_download
 from transformers import pipeline
 import time
+import requests
 import torch
 from pathlib import Path
 import weblinx as wl
 import os
 import re
+from bs4 import BeautifulSoup
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# print(device)
+device = ['cuda','cpu']
+device_choice = 1
+device = torch.device(device[1])
 
-
-downloadValidation = False
+models = ["McGill-NLP/Sheared-LLaMA-1.3B-weblinx","McGill-NLP/Sheared-LLaMA-2.7B-weblinx"]
+model_choice = 0
 downloadDataset = False
-startService = True
+downloadValidation = False
 
-
-# Downloading validation dataset
-if downloadValidation:
-
-    # Load the validation split
-    valid = load_dataset("McGill-NLP/weblinx", split="validation")
-
-    # Download the input templates and use the LLaMA one
-    snapshot_download(
-        "McGill-NLP/WebLINX", repo_type="dataset", allow_patterns="templates/*", local_dir="."
-    )
-    with open('templates/llama.txt') as f:
-        template = f.read()
-
-    # To get the input text, simply pass a turn from the valid split to the template
-    turn = valid[0]
-    turn_text = template.format(**turn)
-
-    action_model = pipeline(
-        model="McGill-NLP/Sheared-LLaMA-2.7B-weblinx", device=device, torch_dtype='auto'
-    )
-
-    out = action_model(turn_text, return_full_text=False, max_new_tokens=64, truncation=True)
-    pred = out[0]['generated_text'].strip()
-
-    print("Ref:", turn["action"])
-    print("Pred:", pred)
-        
-    
-
-
-if downloadDataset:
-    # Downloading a couple of demos
-    demo_names = ['ajjgtji']  # random demo from valid
-    patterns = [f"demonstrations/{name}/*" for name in demo_names]
-    snapshot_download(
-        repo_id="McGill-NLP/WebLINX-full", repo_type="dataset", local_dir="./wl_data", allow_patterns=patterns
-    )
+def visualizeDataset():
 
     wl_dir = Path("./wl_data")
     base_dir = wl_dir / "demonstrations"
@@ -82,20 +48,150 @@ if downloadDataset:
     turns = replay.filter_by_intents(
         "click", "textInput", "load", "say", "submit"
     )
-    # print("all turns are:",turns)
+    print("all turns are:",turns)
 
     turn = turns[0]
-    # print("turn 0 is:",turn)
-    # print("HTML sneak peak:", turn.html[:75])
-    # print("Random Bounding Box:", turn.bboxes['bc7dcf18-542d-48e6'])
+    print("turn 0 is:",turn)
+    print("HTML sneak peak:", turn.html)
+    print("Random Bounding Box:", turn.bboxes)
 
-print()
 
-def action_model_predict(action_str):
-    # place holder for now
-    print("Yes, sure")
-    time.sleep(3)
-    return "load(url=\"https://wikipedia.com\")"
+if downloadDataset:
+    # Downloading a couple of demos
+    demo_names = ['ajjgtji']  # random demo from valid
+    patterns = [f"demonstrations/{name}/*" for name in demo_names]
+    snapshot_download(
+        repo_id="McGill-NLP/WebLINX-full", repo_type="dataset", local_dir="./wl_data", allow_patterns=patterns
+    )
+    visualizeDataset()
+ 
+# Downloading validation dataset
+if downloadValidation:
+
+    # Load the validation split
+    valid = load_dataset("McGill-NLP/weblinx", split="validation")
+
+    # Download the input templates and use the LLaMA one
+    snapshot_download(
+        "McGill-NLP/WebLINX", repo_type="dataset", allow_patterns="templates/*", local_dir="."
+    )
+    
+    # To get the input text, simply pass a turn from the valid split to the template
+    turn = valid[0] # print("Ref:", turn["action"])
+    
+## Loading models 
+# action_model = pipeline(
+#         model=models[model_choice], device=device, torch_dtype='auto'
+#     )
+
+def send_prediction_request(turn_text):
+    response = requests.post('http://localhost:5000/predict', json={'turn_next': turn_text})
+    if response.status_code == 200:
+        return response.json()['prediction']
+    else:
+        print("Failed to get prediction:", response.json())
+        return None
+
+# Function to clean HTML using BeautifulSoup
+def clean_html_page(raw_html):
+    soup = BeautifulSoup(raw_html, "html.parser")
+    
+    # Remove scripts and style elements
+    for script in soup(["script", "style"]):
+        script.decompose()
+    clean_text = soup.get_text()
+    return clean_text
+
+## Initializing variables
+action_history = []   
+utterances = [] 
+
+"""
+user_request: contains the utterance request of the user, if None, then the model is still predicting next actions
+action_history: this will contain raw action_history but with no "</s><s>[INST]" in the end of the last instruction, but </s><s>[INST] in the beginnning of instructor instructions
+utterances: this will contain the processed utterances using the time for example [00:00] hi
+"""
+def action_model_predict(user_request, action_history, utterances):
+    """
+    {clean_html} - > clean html page
+    {utterances} - > The user's first and last 4 utterances
+    {viewport} - > View port 
+    {candidates} - > the top candidates for this turn
+    {action_history} -> Only the last 5 turns are provided
+    """
+ 
+    action_history_element = ""
+    if user_request == None:
+        # then the model should continue predicting and </s><s>[INST] should be temporarly be put at the end of the action history
+           
+        for action in action_history[-5:]:
+            if action.startswith("<"):
+                # Don't add a space if the action was a speaker instruction
+                action_history_element += action
+
+            else:
+                action_history_element += " "+action
+         
+        action_history_element += f"</s><s>[INST]"
+    
+    else:
+        # then you should add the user_request to the action history with </s><s>[INST] like: </s><s>[INST] say(speaker="instructor", utterance="Open the one which has the highest reviews.")
+        instruction = f"</s><s>[INST] say(speaker=\"instructor\", utterance=\"{user_request}\")"
+        action_history.append(instruction)
+        action_history_element = " ".join(action_history[-5:])
+        # Add the new user request to the action_history and action_history_element
+                
+    # Append the new last user request
+    if user_request is not None:
+        elapsed_time = time.strftime("[%M:%S]", time.gmtime(time.time() - start_time))
+        utterances.append(f"{elapsed_time} {user_request}")
+    
+    utterances_element = ""
+    if len(utterances) > 5:
+        utterances_element = " ".join([utterances[0]]+utterances[-4:])
+    else:
+        utterances_element = " ".join(utterances)
+     
+    # Retrieving clean html page
+    raw_html = driver.page_source
+    clean_html = clean_html_page(raw_html)
+    clean_html = ""
+
+    # 746h x 1536w
+    viewport = driver.execute_script("return [window.innerWidth, window.innerHeight];")
+    width , height = viewport[0], viewport[1]
+    viewport = f"{height}h x {width}w"
+
+    # Use DMR model to get candidates for prediction
+    candidates = ""
+
+    turn = {"clean_html": clean_html, "utterances": utterances_element, "viewport": viewport, "candidates": candidates, "action_history": action_history_element}
+    
+    turn_text = template.format(**turn)
+    print("turn_next is:------------------------------------------------------------------------------------------------------\n",turn_text)
+    print("------------------------------------------------------------------------------------------------------")
+
+
+    ## POST METHOD to get the result of the model running on a server
+    if user_request !=  None and user_request.startswith("load"):
+        site = user_request.split(" ")[1]
+        action_str = f"load(url=\"https://{site}.com\")"
+    else:
+        action_str = "say(speaker=\"navigator\", utterance=\"Hi\")" if len(utterances) == 0 else "say(speaker=\"navigator\", utterance=\"Done.\")"
+    # action_str = action_model(turn_text, return_full_text=False, max_new_tokens=64, truncation=True)[0]['generated_text'].strip()
+    # action_str = send_prediction_request(turn_text)
+    
+    # Append the new last action
+    execute_action(driver, action_str, candidates)
+    action_history.append(action_str)
+    
+    # for the action history, always put a temporary </s><s>[INST] in the end, unless the action is say(speaker="instructor"), then the </s><s>[INST] is in the beginning, for example: </s><s>[INST] say(speaker="instructor", utterance="Open the one which has the highest reviews.")
+    ## whenever the action is a say(speaker="navigator") , then you must wait for the user for a new input instead of continuing in this loop
+    if action_str[0:3] == "say":
+        return 
+    else:
+        return action_model_predict(None, action_history, utterances)
+    
 
 def parse_action_string(action_str):
     # Extracting the main command and its arguments
@@ -115,15 +211,75 @@ def parse_action_string(action_str):
             value = int(value)
         args[key] = value
     
+    # print("parsed action: ",command_type," ",args)
     return command_type, args
 
-def handle_change(driver, value, uid):
-    element = driver.find_element(By.ID, uid)
+retrieve_element = """
+    var x = arguments[0], y = arguments[1], width = arguments[2], height = arguments[3];
+    var elements = document.elementsFromPoint(x + width/2, y + height/2);
+    if (elements.length > 0) return elements[0];
+    return null;
+    """
+retrieve_form = """
+        var x = arguments[0], y = arguments[1], width = arguments[2], height = arguments[3];
+        var elements = document.elementsFromPoint(x + width/2, y + height/2);
+        for (var i = 0; i < elements.length; i++) {
+            if (elements[i].tagName.toLowerCase() === 'form') {
+                elements[i].submit();
+                return true;
+            }
+        }
+        return false;
+        """
+
+def retrieve_from_candidates(uid, candidates):
+    # Regex to match the pattern containing the uid and extract the entire line along with bbox values
+    candidates += "\n" # helps with pattern matching
+    print(candidates)
+    pattern = r'(\(uid = {}\) .*?\[\[bbox\]\] x=(.*?) y=(.*?) width=(.*?) height=(.*?) \[\[.*?\n)'.format(uid)
+    
+    # Search for the pattern in the candidates string
+    match = re.search(pattern, candidates)
+    
+    if match:
+        # Extract the entire line and the x, y, width, and height from the match
+        entire_line = match.group(1)
+        x = float(match.group(2))
+        y = float(match.group(3))
+        width = float(match.group(4))
+        height = float(match.group(5))
+        
+        # Print the entire line for debugging or information
+        print("Matched Data:", entire_line.strip())
+        
+        # Return x, y, width, and height
+        return x, y, width, height
+    else:
+        # Print a message or raise an error if the uid is not found
+        print("UID not found in candidates.")
+        return None
+
+
+def handle_change(driver, candidates, value, uid):
+    bbox = retrieve_from_candidates(uid,candidates)
+    if bbox is None: 
+        return 
+    else:
+        x, y, width, height = bbox
+    
+    # Execute the script and get the element
+    element = driver.execute_script(retrieve_element, x, y, width, height)
     element.clear()
     element.send_keys(value)
 
-def handle_click(driver, uid):
-    element = driver.find_element(By.ID, uid)
+def handle_click(driver, candidates, uid):
+    bbox = retrieve_from_candidates(uid,candidates)
+    if bbox is None: 
+        return 
+    else:
+        x, y, width, height = bbox
+    # Execute the script and get the element
+    element = driver.execute_script(retrieve_element, x, y, width, height)
     element.click()
 
 def handle_load(driver, url):
@@ -135,85 +291,72 @@ def handle_say(utterance):
 def handle_scroll(driver, x, y):
     driver.execute_script(f"window.scrollBy({x}, {y})")
 
-def handle_submit(driver, uid):
-    element = driver.find_element(By.ID, uid)
+def handle_submit(driver, candidates, uid):
+    bbox = retrieve_from_candidates(uid,candidates)
+    if bbox is None: 
+        return 
+    else:
+        x, y, width, height = bbox
+    # Execute the script and get the element
+    element = driver.execute_script(retrieve_form, x, y, width, height)
     element.submit()
 
-def handle_text_input(driver, text, uid):
-    element = driver.find_element(By.ID, uid)
+def handle_text_input(driver, candidates, text, uid):
+    bbox = retrieve_from_candidates(uid,candidates)
+    if bbox is None: 
+        return 
+    else:
+        x, y, width, height = bbox
+    # Execute the script and get the element
+    element = driver.execute_script(retrieve_element, x, y, width, height)
     element.send_keys(text)
 
-def execute_action(driver, action_str):
+def execute_action(driver, action_str, candidates):
     command_type, args = parse_action_string(action_str)
     
     if command_type == "change":
         handle_change(driver, **args)
     elif command_type == "click":
-        handle_click(driver, **args)
+        handle_click(driver, candidates, **args)
     elif command_type == "load":
-        handle_load(driver, **args)
+        handle_load(driver, **args )
     elif command_type == "say":
-        handle_say(**args)
+        handle_say(args["utterance"])
     elif command_type == "scroll":
         handle_scroll(driver, **args)
     elif command_type == "submit":
-        handle_submit(driver, **args)
+        # handle_submit(driver, candidates, **args)
+        handle_click(driver, candidates, **args)
     elif command_type == "text_input":
-        handle_text_input(driver, **args)
+        handle_text_input(driver, candidates, **args)
 
-if startService:
-    #### Automation tool section
+def take_screenshot(driver, path="./image.png"):
+    # Returns and base64 encoded string into image
+    driver.save_screenshot(path)
+    return
 
-    chrome_options = Options()
-    chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
-    service = Service(executable_path="chromedriver.exe") # Path to the chromedriver.exe
-    # driver = webdriver.Chrome(service=service, options=chrome_options) # the driver is what allows use to the chrome as an agent
-    driver = webdriver.Chrome(service=service) # the driver is what allows use to the chrome as an agent
+# opening template file
+with open('templates/llama.txt') as f:
+        template = f.read()
 
-    # Go to the google page
-    driver.get("https://google.com")
+#### Automation tool section
+chrome_options = Options()
+chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
-    while True: 
-        # action_str = str(input("Write an action to perform in the correct format:  \nchange(value=[str], uid=[str]) ; click(uid=[str]) ; load(url=[str]) ; say(speaker=\"navigator\", utterance=[str]) ; scroll(x=[int], y=[int]) ; submit(uid=[str]) ; text_input(text=[str], uid=[str])):\n"))
-        action_str = str(input("Input: "))
-        action_str= action_model_predict(action_str)
-        print("model prediction: ",action_str) # example action_str: load(url="https://wikipedia.com")
-        execute_action(driver, action_str)
-        print()
-    
-    # ################## Input to the model
-    # {clean_html} - > clean html page
-    # {utterances} - > The user's first and last 4 utterances
-    # {viewport} - > View port 
-    # {candidates} - > the top candidates for this turn
-    # {action_history} -> Only the last 5 turns are provided
+service = Service(executable_path="chromedriver.exe") # Path to the chromedriver.exe
+# driver = webdriver.Chrome(service=service, options=chrome_options) # the driver is what allows use to the chrome as an agent
+driver = webdriver.Chrome(service=service) # the driver is what allows use to the chrome as an agent
 
-    # ################## Output of the model
-    # # change(value=[str], uid=[str]) ; click(uid=[str]) ; load(url=[str]) ; say(speaker="navigator", utterance=[str]) ; scroll(x=[int], y=[int]) ; submit(uid=[str]) ; text_input(text=[str], uid=[str])
+# Go to the google page
+driver.get("https://google.com")
 
-    # # if it exists then get the element, clear the input in it and type something and click enter
+start_time = time.time()
+user_request = None
 
-    # # try to find the google search bar by its ID
-    # WebDriverWait(driver, 5).until(
-    #     EC.presence_of_element_located((By.CLASS_NAME, "gLFyf"))
-    # )
-
-    # input_element = driver.find_element(By.CLASS_NAME, "gLFyf")
-    # input_element.clear()
-
-    # websiteToGo = str(input("Which website would you like to navigate to?"))
-    # input_element.send_keys(websiteToGo + Keys.ENTER)
-
-    # # Look if there is a precense of a partial_link_text containing the word reddit
-    # WebDriverWait(driver, 5).until(
-    #     EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, websiteToGo))
-    # )
-
-    # # Click on the first link containing the word reddit
-    # link = driver.find_element(By.PARTIAL_LINK_TEXT, websiteToGo)
-    # link.click()
-
-    # time.sleep(10)
-
-    # driver.quit()
+while True: 
+    # action_str = str(input("Write an action to perform in the correct format:  \nchange(value=[str], uid=[str]) ; click(uid=[str]) ; load(url=[str]) ; say(speaker=\"navigator\", utterance=[str]) ; scroll(x=[int], y=[int]) ; submit(uid=[str]) ; text_input(text=[str], uid=[str])):\n"))
+    # start the program with an empty action_history and utterances (the model will start by saying hello, then expect an input)
+    action_model_predict(user_request, action_history, utterances)
+    user_request = str(input("Input: "))
+    print()

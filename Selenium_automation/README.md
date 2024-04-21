@@ -18,3 +18,7 @@ To use the weblinx library and import models make sure to install
 To test the the code in a specific chrome envirnoment, start chrome as such from the terminal
 
 `chrome.exe --remote-debugging-port=9222`
+
+Experimentation with different models. We found that we could not use the McGill-NLP/Sheared-LLaMA-2.7B-weblinx model due it necessiting 30GB during inference which is not a capacity that we were able to accomodate 
+31.90 Gib needed at least for the McGill-NLP/Sheared-LLaMA-2.7B-weblinx model
+32.39 GiB needed at least for the McGill-NLP/Sheared-LLaMA-1.3B-weblinx model
