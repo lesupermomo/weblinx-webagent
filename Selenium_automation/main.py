@@ -22,68 +22,6 @@ device = ['cuda','cpu']
 device_choice = 1
 device = torch.device(device[1])
 
-models = ["McGill-NLP/Sheared-LLaMA-1.3B-weblinx","McGill-NLP/Sheared-LLaMA-2.7B-weblinx"]
-model_choice = 0
-downloadDataset = False
-downloadValidation = False
-
-def visualizeDataset():
-
-    wl_dir = Path("./wl_data")
-    base_dir = wl_dir / "demonstrations"
-    split_path = wl_dir / "splits.json"
-
-    demo_names = ['ajjgtji']  # random demo from valid
-
-    # Load the demonstrations
-    demos = [wl.Demonstration(name, base_dir=base_dir) for name in demo_names]
-
-    # Select a demo to work with
-    demo = demos[0]
-
-    # Load the Replay object, which contains the turns of the demonstration
-    replay = wl.Replay.from_demonstration(demo)
-
-    # Filter the turns to keep only the ones that are relevant for the task
-    turns = replay.filter_by_intents(
-        "click", "textInput", "load", "say", "submit"
-    )
-    print("all turns are:",turns)
-
-    turn = turns[0]
-    print("turn 0 is:",turn)
-    print("HTML sneak peak:", turn.html)
-    print("Random Bounding Box:", turn.bboxes)
-
-
-if downloadDataset:
-    # Downloading a couple of demos
-    demo_names = ['ajjgtji']  # random demo from valid
-    patterns = [f"demonstrations/{name}/*" for name in demo_names]
-    snapshot_download(
-        repo_id="McGill-NLP/WebLINX-full", repo_type="dataset", local_dir="./wl_data", allow_patterns=patterns
-    )
-    visualizeDataset()
- 
-# Downloading validation dataset
-if downloadValidation:
-
-    # Load the validation split
-    valid = load_dataset("McGill-NLP/weblinx", split="validation")
-
-    # Download the input templates and use the LLaMA one
-    snapshot_download(
-        "McGill-NLP/WebLINX", repo_type="dataset", allow_patterns="templates/*", local_dir="."
-    )
-    
-    # To get the input text, simply pass a turn from the valid split to the template
-    turn = valid[0] # print("Ref:", turn["action"])
-    
-## Loading models 
-# action_model = pipeline(
-#         model=models[model_choice], device=device, torch_dtype='auto'
-#     )
-
 def send_prediction_request(turn_text):
     response = requests.post('http://localhost:5000/predict', json={'turn_next': turn_text})
     if response.status_code == 200:
@@ -178,7 +116,6 @@ def action_model_predict(user_request, action_history, utterances):
         action_str = f"load(url=\"https://{site}.com\")"
     else:
         action_str = "say(speaker=\"navigator\", utterance=\"Hi\")" if len(utterances) == 0 else "say(speaker=\"navigator\", utterance=\"Done.\")"
-    # action_str = action_model(turn_text, return_full_text=False, max_new_tokens=64, truncation=True)[0]['generated_text'].strip()
     # action_str = send_prediction_request(turn_text)
     
     # Append the new last action
