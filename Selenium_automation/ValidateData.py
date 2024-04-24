@@ -54,7 +54,6 @@ def action_model_predict_from_data(turn):
     action_str = "say(speaker=\"navigator\", utterance=\"Hi\")"
     action_str = turn['action']
     print("action to execute: ", action_str)
-    # Append the new last action
     execute_action(driver, action_str, turn['candidates'])
     time.sleep(4)
         
@@ -78,7 +77,6 @@ def parse_action_string(action_str):
             value = int(value)
         args[key] = value
     
-    # print("parsed action: ",command_type," ",args)
     return command_type, args
 
 
@@ -88,6 +86,7 @@ retrieve_element = """
     if (elements.length > 0) return elements[0];
     return null;
     """
+
 retrieve_form = """
         var x = arguments[0], y = arguments[1], width = arguments[2], height = arguments[3];
         var elements = document.elementsFromPoint(x + width/2, y + height/2);

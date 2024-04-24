@@ -1,0 +1,10 @@
+selenium
+datasets
+huggingface_hub
+transformers
+torch
+requests
+beautifulsoup4
+Flask
+weblinx
+huggingface_hub[cli]
