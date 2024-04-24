@@ -10,6 +10,16 @@ To start using the application start by installing the necessary libraries with 
 
 `pip intall -r requirements.txt`
 
-To directly see how our application performs the actions of the weblinx dataset simply run the validateData python program
+# Running the application
+
+First start by navigating to the selenium folder
+
+`cd Selenium_automation`
+
+To directly see how our application performs the actions of the weblinx validation dataset simply run the validateData python program
 
 `python validateData.py`
+
+To directly see how our application prepares the data for our action model run the main file
+
+`python main.py`
