@@ -23,3 +23,11 @@ To directly see how our application performs the actions of the weblinx validati
 To directly see how our application prepares the data for our action model run the main file
 
 `python main.py`
+
+# Demo
+Link to demo: https://github.com/lesupermomo/weblinx-webagent/raw/refs/heads/main/projectDemo.mp4 
+
+![image](https://github.com/user-attachments/assets/20d9dd6b-60b2-48ae-8231-211433fa3dda)
+![image](https://github.com/user-attachments/assets/4783f865-ad57-45af-b6cb-242d41fea143)
+
+
